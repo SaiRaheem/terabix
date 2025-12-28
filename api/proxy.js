@@ -1,51 +1,56 @@
 // Serverless function for Vercel - Proxy endpoint
-// Streams files from Terabox to bypass CORS and support range requests
+// Handles streaming downloads from Terabox with proper headers
 
-import axios from 'axios';
+const axios = require('axios');
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
     // CORS headers
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Range, Content-Type');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Range');
 
+    // Handle preflight
     if (req.method === 'OPTIONS') {
         return res.status(200).end();
     }
 
+    // Only allow GET
     if (req.method !== 'GET') {
-        return res.status(405).json({ error: 'Method not allowed' });
+        return res.status(405).json({ success: false, error: 'Method not allowed' });
     }
 
     try {
         const { url, file_name } = req.query;
 
         if (!url) {
-            return res.status(400).json({ error: 'Missing required parameter: url' });
+            return res.status(400).json({
+                success: false,
+                error: 'Missing required parameter: url'
+            });
         }
 
-        const decodedUrl = decodeURIComponent(url);
-        const fileName = file_name ? decodeURIComponent(file_name) : 'download';
+        const fileName = file_name || 'download';
 
-        // Prepare headers for Terabox request
+        // Get range header if present
+        const range = req.headers.range;
+
         const headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
             'Referer': 'https://www.terabox.com/',
             'Accept': '*/*',
         };
 
-        // Handle range requests for video streaming
-        if (req.headers.range) {
-            headers['Range'] = req.headers.range;
+        if (range) {
+            headers['Range'] = range;
         }
 
-        // Make request to Terabox
+        // Stream the file
         const response = await axios({
             method: 'GET',
-            url: decodedUrl,
+            url: decodeURIComponent(url),
             headers: headers,
             responseType: 'stream',
-            validateStatus: (status) => status < 500, // Accept 206 for partial content
+            timeout: 60000, // 60 second timeout for downloads
         });
 
         // Set response headers
@@ -65,14 +70,17 @@ export default async function handler(req, res) {
             res.status(200);
         }
 
-        // Stream the response
+        // Pipe the response
         response.data.pipe(res);
 
-        // Handle errors during streaming
+        // Handle errors
         response.data.on('error', (error) => {
             console.error('Stream error:', error);
             if (!res.headersSent) {
-                res.status(500).json({ error: 'Error streaming file' });
+                res.status(500).json({
+                    success: false,
+                    error: 'Error streaming file'
+                });
             }
         });
 
@@ -80,16 +88,10 @@ export default async function handler(req, res) {
         console.error('Proxy error:', error.message);
 
         if (!res.headersSent) {
-            res.status(500).json({
-                error: error.message || 'Failed to proxy file'
+            return res.status(500).json({
+                success: false,
+                error: error.message || 'Failed to proxy download'
             });
         }
     }
-}
-
-// Increase timeout for large file downloads (Vercel limit is 60s for Hobby plan)
-export const config = {
-    api: {
-        responseLimit: false,
-    },
 };

@@ -1,7 +1,7 @@
 // Serverless function for Vercel - Download endpoint
 // Handles Terabox link parsing and direct download link generation
 
-import axios from 'axios';
+const axios = require('axios');
 
 // Helper function to extract surl from various Terabox URL formats
 function extractSurl(link) {
@@ -72,16 +72,18 @@ function checkRateLimit(ip) {
     return true;
 }
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
     // CORS headers
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
+    // Handle preflight
     if (req.method === 'OPTIONS') {
         return res.status(200).end();
     }
 
+    // Only allow POST
     if (req.method !== 'POST') {
         return res.status(405).json({ success: false, error: 'Method not allowed' });
     }
@@ -164,107 +166,105 @@ export default async function handler(req, res) {
             headers: {
                 ...headers,
                 'Accept': 'application/json, text/plain, */*',
-            }
+            },
+            timeout: 30000,
         });
 
         if (listResponse.data.errno !== 0) {
             return res.status(400).json({
                 success: false,
-                error: `Terabox API error: ${listResponse.data.errno}`
+                error: `Terabox API error: ${listResponse.data.errmsg || 'Unknown error'}`
             });
         }
 
         const fileList = listResponse.data.list || [];
+
         if (fileList.length === 0) {
             return res.status(404).json({
                 success: false,
-                error: 'No files found in share'
+                error: 'No files found in the shared link'
             });
         }
 
-        console.log('File list:', fileList.length, 'files');
+        // Check if it's a folder (multiple files) or single file
+        if (fileList.length === 1) {
+            // Single file
+            const file = fileList[0];
 
-        // Step 3: Get download link for first file (or handle folder)
-        const firstFile = fileList[0];
+            // Step 3: Get direct download link
+            const downloadUrl = 'https://www.terabox.com/share/download';
+            const downloadParams = {
+                app_id: '250',
+                channel: 'dubox',
+                clienttype: '0',
+                web: '1',
+                sign: initData.bdstoken,
+                timestamp: Math.floor(Date.now() / 1000),
+                shareid: initData.shareid,
+                uk: initData.uk,
+                fid_list: `[${file.fs_id}]`,
+            };
 
-        // If it's a folder, return list of files
-        if (firstFile.isdir === 1) {
-            const folderFiles = fileList.map(file => ({
-                file_name: file.server_filename,
-                file_size: formatFileSize(file.size),
-                size_bytes: file.size,
-                thumbnail: file.thumbs?.url3 || file.thumbs?.url2 || file.thumbs?.url1,
-                fs_id: file.fs_id,
-                isdir: file.isdir,
-                download_link: '', // Will need separate request for each
+            const downloadResponse = await axios.get(downloadUrl, {
+                params: downloadParams,
+                headers: {
+                    ...headers,
+                    'Accept': 'application/json, text/plain, */*',
+                },
+                timeout: 30000,
+            });
+
+            if (downloadResponse.data.errno !== 0) {
+                return res.status(400).json({
+                    success: false,
+                    error: `Failed to get download link: ${downloadResponse.data.errmsg || 'Unknown error'}`
+                });
+            }
+
+            const downloadLink = downloadResponse.data.dlink || downloadResponse.data.list?.[0]?.dlink;
+
+            if (!downloadLink) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Could not retrieve download link. The file may require PC client download.'
+                });
+            }
+
+            // Return single file metadata
+            return res.status(200).json({
+                success: true,
+                data: {
+                    fileName: file.server_filename,
+                    fileSize: formatFileSize(file.size),
+                    fileSizeBytes: file.size,
+                    downloadLink: downloadLink,
+                    isFolder: false,
+                    thumbUrl: file.thumbs?.url3 || null,
+                }
+            });
+        } else {
+            // Multiple files (folder)
+            const files = fileList.map(file => ({
+                fileName: file.server_filename,
+                fileSize: formatFileSize(file.size),
+                fileSizeBytes: file.size,
+                fsId: file.fs_id,
+                isDir: file.isdir === 1,
+                thumbUrl: file.thumbs?.url3 || null,
             }));
 
             return res.status(200).json({
                 success: true,
                 data: {
-                    folder_name: firstFile.server_filename,
-                    files: folderFiles,
+                    isFolder: true,
+                    folderName: 'Shared Folder',
+                    totalFiles: files.length,
+                    files: files,
+                    // Note: For folders, individual file download links need to be fetched separately
+                    message: 'This is a folder share. Download links for individual files need to be fetched separately.'
                 }
             });
         }
-
-        // Get direct download link
-        const timestamp = Math.floor(Date.now() / 1000);
-        const downloadUrl = 'https://www.terabox.com/share/download';
-        const downloadParams = {
-            app_id: '250',
-            channel: 'dubox',
-            clienttype: '0',
-            web: '1',
-            sign: initData.bdstoken,
-            timestamp: timestamp,
-            fid_list: `[${firstFile.fs_id}]`,
-            primaryid: initData.shareid,
-            uk: initData.uk,
-            vip: '0',
-            type: 'dlink',
-        };
-
-        const downloadResponse = await axios.get(downloadUrl, {
-            params: downloadParams,
-            headers: {
-                ...headers,
-                'Accept': 'application/json, text/plain, */*',
-            }
-        });
-
-        console.log('Download response:', downloadResponse.data);
-
-        if (downloadResponse.data.errno !== 0) {
-            return res.status(400).json({
-                success: false,
-                error: `Failed to get download link. Error code: ${downloadResponse.data.errno}`
-            });
-        }
-
-        const dlink = downloadResponse.data.dlink || downloadResponse.data.list?.[0]?.dlink;
-
-        if (!dlink) {
-            return res.status(400).json({
-                success: false,
-                error: 'Download link not found in response'
-            });
-        }
-
-        // Return file metadata with download link
-        const fileData = {
-            file_name: firstFile.server_filename,
-            file_size: formatFileSize(firstFile.size),
-            size_bytes: firstFile.size,
-            thumbnail: firstFile.thumbs?.url3 || firstFile.thumbs?.url2 || firstFile.thumbs?.url1,
-            download_link: dlink,
-            proxy_url: `/api/proxy?url=${encodeURIComponent(dlink)}&file_name=${encodeURIComponent(firstFile.server_filename)}`,
-        };
-
-        return res.status(200).json({
-            success: true,
-            data: fileData,
-        });
 
     } catch (error) {
         console.error('Error details:', {
@@ -294,4 +294,4 @@ export default async function handler(req, res) {
             error: errorMessage
         });
     }
-}
+};
