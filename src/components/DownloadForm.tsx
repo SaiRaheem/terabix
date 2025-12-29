@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 
 interface DownloadFormProps {
     onSubmit: (link: string, cookies: string) => void;

@@ -1,4 +1,4 @@
-import React from 'react';
+
 import type { FileMetadata, FolderContent } from '../types';
 
 interface FileDisplayProps {
