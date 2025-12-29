@@ -112,55 +112,21 @@ export default async function handler(req, res) {
         const surl = extractSurl(link);
         console.log('Extracted surl:', surl);
 
-        // Step 1: Initialize share and get tokens
-        const initUrl = `https://www.terabox.com/share/init?surl=${surl}`;
         const headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
             'Cookie': cookies,
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-            'Accept-Language': 'en-US,en;q=0.5',
-            'Referer': 'https://www.terabox.com/',
+            'Accept': 'application/json, text/plain, */*',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Referer': `https://www.terabox.com/sharing/link?surl=${surl}`,
         };
 
-        // Axios configuration with timeout and SSL handling
-        const axiosConfig = {
-            headers,
-            timeout: 30000, // 30 second timeout
-            maxRedirects: 5,
-            validateStatus: (status) => status < 500, // Accept any status < 500
-        };
-
-        console.log('Fetching init URL:', initUrl);
-        const initResponse = await axios.get(initUrl, axiosConfig);
-        console.log('Init response status:', initResponse.status);
-
-        const initData = extractDataFromHtml(initResponse.data);
-
-        console.log('Extracted data:', initData);
-        console.log('HTML snippet:', typeof initResponse.data === 'string' ? initResponse.data.substring(0, 500) : 'Not a string');
-
-        if (!initData.bdstoken || !initData.uk || !initData.shareid) {
-            return res.status(400).json({
-                success: false,
-                error: 'Failed to initialize share. Cookie may be expired or invalid.',
-                debug: {
-                    extractedData: initData,
-                    htmlSnippet: typeof initResponse.data === 'string' ? initResponse.data.substring(0, 300) : 'Not HTML',
-                    status: initResponse.status
-                }
-            });
-        }
-
-        console.log('Init data:', initData);
-
-        // Step 2: Get file list
+        // Get file list directly (skip init step)
         const listUrl = 'https://www.terabox.com/share/list';
         const listParams = {
             app_id: '250',
             channel: 'dubox',
             clienttype: '0',
             web: '1',
-            'dp-logid': initData.logid,
             shorturl: surl,
             root: '1',
             dir: '/',
@@ -170,19 +136,23 @@ export default async function handler(req, res) {
             desc: '1',
         };
 
+        console.log('Fetching file list...');
         const listResponse = await axios.get(listUrl, {
             params: listParams,
-            headers: {
-                ...headers,
-                'Accept': 'application/json, text/plain, */*',
-            },
+            headers,
             timeout: 30000,
         });
+
+        console.log('List response errno:', listResponse.data.errno);
 
         if (listResponse.data.errno !== 0) {
             return res.status(400).json({
                 success: false,
-                error: `Terabox API error: ${listResponse.data.errmsg || 'Unknown error'}`
+                error: `Terabox API error: ${listResponse.data.errmsg || listResponse.data.errno || 'Unknown error'}`,
+                debug: {
+                    errno: listResponse.data.errno,
+                    errmsg: listResponse.data.errmsg
+                }
             });
         }
 
@@ -207,19 +177,13 @@ export default async function handler(req, res) {
                 channel: 'dubox',
                 clienttype: '0',
                 web: '1',
-                sign: initData.bdstoken,
-                timestamp: Math.floor(Date.now() / 1000),
-                shareid: initData.shareid,
-                uk: initData.uk,
+                shorturl: surl,
                 fid_list: `[${file.fs_id}]`,
             };
 
             const downloadResponse = await axios.get(downloadUrl, {
                 params: downloadParams,
-                headers: {
-                    ...headers,
-                    'Accept': 'application/json, text/plain, */*',
-                },
+                headers,
                 timeout: 30000,
             });
 
