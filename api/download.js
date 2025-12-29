@@ -112,6 +112,12 @@ export default async function handler(req, res) {
         const surl = extractSurl(link);
         console.log('Extracted surl:', surl);
 
+        // Detect the domain from the link
+        const linkUrl = new URL(link);
+        const baseDomain = linkUrl.hostname; // e.g., "1024terabox.com" or "www.terabox.com"
+        const apiDomain = baseDomain.replace('www.', ''); // Remove www if present
+        console.log('Using domain:', apiDomain);
+
         // Ensure cookie has proper format
         const cookieString = cookies.includes('ndus=') ? cookies : `ndus=${cookies}`;
 
@@ -120,13 +126,13 @@ export default async function handler(req, res) {
             'Cookie': cookieString,
             'Accept': 'application/json, text/plain, */*',
             'Accept-Language': 'en-US,en;q=0.9',
-            'Referer': `https://www.terabox.com/sharing/link?surl=${surl}`,
-            'Origin': 'https://www.terabox.com',
+            'Referer': `https://${apiDomain}/sharing/link?surl=${surl}`,
+            'Origin': `https://${apiDomain}`,
         };
 
         // First, visit the share page to get jsToken
         console.log('Visiting share page to get jsToken...');
-        const sharePageUrl = `https://www.terabox.com/sharing/link?surl=${surl}`;
+        const sharePageUrl = `https://${apiDomain}/sharing/link?surl=${surl}`;
         const sharePageResponse = await axios.get(sharePageUrl, {
             headers: {
                 ...headers,
@@ -144,7 +150,7 @@ export default async function handler(req, res) {
         }
 
         // Get file list
-        const listUrl = 'https://www.terabox.com/share/list';
+        const listUrl = `https://${apiDomain}/share/list`;
         const listParams = {
             app_id: '250',
             channel: 'dubox',
@@ -199,7 +205,7 @@ export default async function handler(req, res) {
             const file = fileList[0];
 
             // Step 3: Get direct download link
-            const downloadUrl = 'https://www.terabox.com/share/download';
+            const downloadUrl = `https://${apiDomain}/share/download`;
             const downloadParams = {
                 app_id: '250',
                 channel: 'dubox',
