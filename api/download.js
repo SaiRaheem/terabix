@@ -112,15 +112,38 @@ export default async function handler(req, res) {
         const surl = extractSurl(link);
         console.log('Extracted surl:', surl);
 
+        // Ensure cookie has proper format
+        const cookieString = cookies.includes('ndus=') ? cookies : `ndus=${cookies}`;
+
         const headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Cookie': cookies,
+            'Cookie': cookieString,
             'Accept': 'application/json, text/plain, */*',
             'Accept-Language': 'en-US,en;q=0.9',
             'Referer': `https://www.terabox.com/sharing/link?surl=${surl}`,
+            'Origin': 'https://www.terabox.com',
         };
 
-        // Get file list directly (skip init step)
+        // First, visit the share page to get jsToken
+        console.log('Visiting share page to get jsToken...');
+        const sharePageUrl = `https://www.terabox.com/sharing/link?surl=${surl}`;
+        const sharePageResponse = await axios.get(sharePageUrl, {
+            headers: {
+                ...headers,
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            },
+            timeout: 30000,
+        });
+
+        // Extract jsToken from the page
+        let jsToken = '';
+        const jsTokenMatch = sharePageResponse.data.match(/jsToken["\s:]+["']([^"']+)["']/);
+        if (jsTokenMatch) {
+            jsToken = jsTokenMatch[1];
+            console.log('Found jsToken:', jsToken);
+        }
+
+        // Get file list
         const listUrl = 'https://www.terabox.com/share/list';
         const listParams = {
             app_id: '250',
@@ -135,6 +158,10 @@ export default async function handler(req, res) {
             order: 'time',
             desc: '1',
         };
+
+        if (jsToken) {
+            listParams.jsToken = jsToken;
+        }
 
         console.log('Fetching file list...');
         const listResponse = await axios.get(listUrl, {
@@ -151,7 +178,8 @@ export default async function handler(req, res) {
                 error: `Terabox API error: ${listResponse.data.errmsg || listResponse.data.errno || 'Unknown error'}`,
                 debug: {
                     errno: listResponse.data.errno,
-                    errmsg: listResponse.data.errmsg
+                    errmsg: listResponse.data.errmsg,
+                    hasJsToken: !!jsToken
                 }
             });
         }
