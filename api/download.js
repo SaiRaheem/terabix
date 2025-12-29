@@ -136,10 +136,18 @@ export default async function handler(req, res) {
 
         const initData = extractDataFromHtml(initResponse.data);
 
+        console.log('Extracted data:', initData);
+        console.log('HTML snippet:', typeof initResponse.data === 'string' ? initResponse.data.substring(0, 500) : 'Not a string');
+
         if (!initData.bdstoken || !initData.uk || !initData.shareid) {
             return res.status(400).json({
                 success: false,
-                error: 'Failed to initialize share. Cookie may be expired or invalid.'
+                error: 'Failed to initialize share. Cookie may be expired or invalid.',
+                debug: {
+                    extractedData: initData,
+                    htmlSnippet: typeof initResponse.data === 'string' ? initResponse.data.substring(0, 300) : 'Not HTML',
+                    status: initResponse.status
+                }
             });
         }
 
