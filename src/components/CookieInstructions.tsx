@@ -74,7 +74,7 @@ const CookieInstructions: React.FC = () => {
                                 4
                             </span>
                             <div>
-                                <strong>Find Cookies:</strong> In the left sidebar, expand "Cookies" and select "https://www.terabox.com".
+                                <strong>Visit Your Share Link:</strong> Open your Terabox share link in the same browser tab. This generates required session cookies.
                             </div>
                         </li>
 
@@ -83,7 +83,7 @@ const CookieInstructions: React.FC = () => {
                                 5
                             </span>
                             <div>
-                                <strong>Copy ndus Cookie:</strong> Find the cookie named <code className="px-2 py-1 bg-gray-200 dark:bg-gray-700 rounded">ndus</code> and copy its value.
+                                <strong>Find Cookies:</strong> In DevTools, go to Application → Cookies → "https://www.terabox.com".
                             </div>
                         </li>
 
@@ -92,7 +92,16 @@ const CookieInstructions: React.FC = () => {
                                 6
                             </span>
                             <div>
-                                <strong>Paste Here:</strong> Paste the cookie value in the format <code className="px-2 py-1 bg-gray-200 dark:bg-gray-700 rounded">ndus=YOUR_VALUE</code> in the cookie field above.
+                                <strong>Copy ALL Cookies:</strong> You need to copy the entire cookie string. Use a cookie editor extension (like "EditThisCookie" or "Cookie-Editor") and export all cookies as a string, OR manually copy all cookies in the format: <code className="px-2 py-1 bg-gray-200 dark:bg-gray-700 rounded text-xs">ndus=xxx; BOXCLND=xxx; csrfToken=xxx</code>
+                            </div>
+                        </li>
+
+                        <li className="flex gap-3">
+                            <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary-500 text-white flex items-center justify-center text-sm font-bold">
+                                7
+                            </span>
+                            <div>
+                                <strong>Paste Here:</strong> Paste the complete cookie string in the cookie field above.
                             </div>
                         </li>
                     </ol>
