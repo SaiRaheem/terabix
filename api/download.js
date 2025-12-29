@@ -1,7 +1,7 @@
 // Serverless function for Vercel - Download endpoint
 // Handles Terabox link parsing and direct download link generation
 
-const axios = require('axios');
+import axios from 'axios';
 
 // Helper function to extract surl from various Terabox URL formats
 function extractSurl(link) {
@@ -72,7 +72,7 @@ function checkRateLimit(ip) {
     return true;
 }
 
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
     // CORS headers
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
