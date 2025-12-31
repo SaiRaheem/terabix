@@ -130,26 +130,8 @@ export default async function handler(req, res) {
             'Origin': `https://${apiDomain}`,
         };
 
-        // First, visit the share page to get jsToken
-        console.log('Visiting share page to get jsToken...');
-        const sharePageUrl = `https://${apiDomain}/sharing/link?surl=${surl}`;
-        const sharePageResponse = await axios.get(sharePageUrl, {
-            headers: {
-                ...headers,
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-            },
-            timeout: 30000,
-        });
-
-        // Extract jsToken from the page
-        let jsToken = '';
-        const jsTokenMatch = sharePageResponse.data.match(/jsToken["\s:]+["']([^"']+)["']/);
-        if (jsTokenMatch) {
-            jsToken = jsTokenMatch[1];
-            console.log('Found jsToken:', jsToken);
-        }
-
-        // Get file list
+        console.log('Fetching file list directly...');
+        // Get file list directly without fetching share page first
         const listUrl = `https://${apiDomain}/share/list`;
         const listParams = {
             app_id: '250',
@@ -165,11 +147,7 @@ export default async function handler(req, res) {
             desc: '1',
         };
 
-        if (jsToken) {
-            listParams.jsToken = jsToken;
-        }
 
-        console.log('Fetching file list...');
         const listResponse = await axios.get(listUrl, {
             params: listParams,
             headers,
@@ -184,8 +162,7 @@ export default async function handler(req, res) {
                 error: `Terabox API error: ${listResponse.data.errmsg || listResponse.data.errno || 'Unknown error'}`,
                 debug: {
                     errno: listResponse.data.errno,
-                    errmsg: listResponse.data.errmsg,
-                    hasJsToken: !!jsToken
+                    errmsg: listResponse.data.errmsg
                 }
             });
         }
