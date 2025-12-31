@@ -1,4 +1,20 @@
 import axios from 'axios';
+import https from 'https';
+
+// Force Node.js runtime
+export const config = {
+    runtime: 'nodejs'
+};
+
+// Disable keep-alive to prevent socket hang up errors
+const httpsAgent = new https.Agent({
+    keepAlive: false,
+    timeout: 60000
+});
+
+// Set axios defaults for large responses
+axios.defaults.maxContentLength = Infinity;
+axios.defaults.maxBodyLength = Infinity;
 
 // Helper function to extract surl from various Terabox URL formats
 function extractSurl(link) {
@@ -129,7 +145,10 @@ export default async function handler(req, res) {
         const listResponse = await axios.get(listUrl, {
             params: listParams,
             headers: enhancedHeaders,
+            httpsAgent: httpsAgent,
             timeout: 50000,
+            maxContentLength: Infinity,
+            maxBodyLength: Infinity,
         });
 
         console.log('List response errno:', listResponse.data.errno);
@@ -171,7 +190,10 @@ export default async function handler(req, res) {
             const downloadResponse = await axios.get(downloadUrl, {
                 params: downloadParams,
                 headers: enhancedHeaders,
+                httpsAgent: httpsAgent,
                 timeout: 50000,
+                maxContentLength: Infinity,
+                maxBodyLength: Infinity,
             });
 
             if (downloadResponse.data.errno !== 0) {
@@ -234,12 +256,16 @@ export default async function handler(req, res) {
 
         let errorMessage = 'Internal server error';
 
-        if (error.code === 'ECONNREFUSED') {
+        if (error.code === 'ECONNRESET') {
+            errorMessage = 'Connection reset by Terabox (socket hang up). Please retry.';
+        } else if (error.code === 'ECONNREFUSED') {
             errorMessage = 'Cannot connect to Terabox servers. Please check your internet connection.';
         } else if (error.code === 'ETIMEDOUT' || error.code === 'ESOCKETTIMEDOUT') {
             errorMessage = 'Request timed out. Terabox servers may be slow or unreachable.';
         } else if (error.code === 'ENOTFOUND') {
             errorMessage = 'Cannot resolve Terabox domain. Please check your DNS settings.';
+        } else if (error.code === 'EPIPE') {
+            errorMessage = 'Broken pipe - connection closed unexpectedly. Please retry.';
         } else if (error.response) {
             errorMessage = error.response.data?.errmsg || `Terabox returned error: ${error.response.status}`;
         } else if (error.message) {
