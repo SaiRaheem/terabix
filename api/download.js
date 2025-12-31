@@ -20,9 +20,14 @@ axios.defaults.maxBodyLength = Infinity;
 function extractSurl(link) {
     try {
         const url = new URL(link);
-        const pathMatch = url.pathname.match(/\/s\/(.+)/);
-        if (pathMatch && pathMatch[1]) {
-            return pathMatch[1];
+        let surl = url.pathname.split('/s/')[1];
+        if (surl) {
+            surl = surl.split('?')[0]; // Remove query params
+            // Strip leading '1' that some domains add (1024terabox.com)
+            if (surl.startsWith('1')) {
+                surl = surl.slice(1);
+            }
+            return surl;
         }
         throw new Error('Invalid Terabox link format');
     } catch (error) {
@@ -120,11 +125,9 @@ export default async function handler(req, res) {
         const surl = extractSurl(link);
         console.log('Extracted surl:', surl);
 
-        // Detect the domain from the link
-        const linkUrl = new URL(link);
-        const baseDomain = linkUrl.hostname;
-        const apiDomain = baseDomain.replace('www.', '');
-        console.log('Using domain:', apiDomain);
+        // Use canonical Terabox domain (all links redirect here)
+        const apiDomain = 'www.terabox.app';
+        console.log('Using canonical domain:', apiDomain);
 
         // Ensure cookie has proper format
         const cookieString = cookies.includes('ndus=') ? cookies : `ndus=${cookies}`;
@@ -141,11 +144,11 @@ export default async function handler(req, res) {
         console.log('Fetching file list directly...');
         const listUrl = `https://${apiDomain}/share/list`;
         const listParams = {
+            surl: surl,  // Use surl, not shorturl
             app_id: '250',
             channel: 'dubox',
             clienttype: '0',
             web: '1',
-            shorturl: surl,
             root: '1',
             dir: '/',
             num: '100',
@@ -204,11 +207,11 @@ export default async function handler(req, res) {
 
             const downloadUrl = `https://${apiDomain}/share/download`;
             const downloadParams = {
+                surl: surl,  // Use surl, not shorturl
                 app_id: '250',
                 channel: 'dubox',
                 clienttype: '0',
                 web: '1',
-                shorturl: surl,
                 fid_list: `[${file.fs_id}]`,
             };
 
