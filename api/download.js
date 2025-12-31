@@ -1,8 +1,3 @@
-// Force Node.js runtime for longer timeouts and better streaming support
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
-export const maxDuration = 60; // 60 second timeout
-
 import axios from 'axios';
 
 // Helper function to extract surl from various Terabox URL formats
@@ -28,10 +23,10 @@ function formatFileSize(bytes) {
     return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
 }
 
-// Rate limiting map (simple in-memory, resets on cold start)
+// Rate limiting map
 const rateLimitMap = new Map();
-const RATE_LIMIT = 10; // requests per minute
-const RATE_WINDOW = 60000; // 1 minute
+const RATE_LIMIT = 10;
+const RATE_WINDOW = 60000;
 
 function checkRateLimit(ip) {
     const now = Date.now();
@@ -47,32 +42,40 @@ function checkRateLimit(ip) {
     return true;
 }
 
-export async function POST(request) {
+export default async function handler(req, res) {
     // CORS headers
-    const headers = {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type',
-        'Content-Type': 'application/json',
-    };
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('Content-Type', 'application/json');
+
+    // Handle preflight
+    if (req.method === 'OPTIONS') {
+        return res.status(200).end();
+    }
+
+    // Only allow POST
+    if (req.method !== 'POST') {
+        return res.status(405).json({ success: false, error: 'Method not allowed' });
+    }
 
     try {
-        const { link, cookies } = await request.json();
+        const { link, cookies } = req.body;
 
         if (!link || !cookies) {
-            return Response.json(
-                { success: false, error: 'Missing required fields: link and cookies' },
-                { status: 400, headers }
-            );
+            return res.status(400).json({
+                success: false,
+                error: 'Missing required fields: link and cookies'
+            });
         }
 
         // Rate limiting
-        const clientIp = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
+        const clientIp = req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || 'unknown';
         if (!checkRateLimit(clientIp)) {
-            return Response.json(
-                { success: false, error: 'Rate limit exceeded. Please try again later.' },
-                { status: 429, headers }
-            );
+            return res.status(429).json({
+                success: false,
+                error: 'Rate limit exceeded. Please try again later.'
+            });
         }
 
         // Extract surl from link
@@ -88,7 +91,7 @@ export async function POST(request) {
         // Ensure cookie has proper format
         const cookieString = cookies.includes('ndus=') ? cookies : `ndus=${cookies}`;
 
-        const requestHeaders = {
+        const headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
             'Cookie': cookieString,
             'Accept': 'application/json, text/plain, */*',
@@ -115,7 +118,7 @@ export async function POST(request) {
         };
 
         const enhancedHeaders = {
-            ...requestHeaders,
+            ...headers,
             'Sec-Fetch-Dest': 'empty',
             'Sec-Fetch-Mode': 'cors',
             'Sec-Fetch-Site': 'same-origin',
@@ -126,32 +129,29 @@ export async function POST(request) {
         const listResponse = await axios.get(listUrl, {
             params: listParams,
             headers: enhancedHeaders,
-            timeout: 50000, // Increased to 50 seconds
+            timeout: 50000,
         });
 
         console.log('List response errno:', listResponse.data.errno);
 
         if (listResponse.data.errno !== 0) {
-            return Response.json(
-                {
-                    success: false,
-                    error: `Terabox API error: ${listResponse.data.errmsg || listResponse.data.errno || 'Unknown error'}`,
-                    debug: {
-                        errno: listResponse.data.errno,
-                        errmsg: listResponse.data.errmsg
-                    }
-                },
-                { status: 400, headers }
-            );
+            return res.status(400).json({
+                success: false,
+                error: `Terabox API error: ${listResponse.data.errmsg || listResponse.data.errno || 'Unknown error'}`,
+                debug: {
+                    errno: listResponse.data.errno,
+                    errmsg: listResponse.data.errmsg
+                }
+            });
         }
 
         const fileList = listResponse.data.list || [];
 
         if (fileList.length === 0) {
-            return Response.json(
-                { success: false, error: 'No files found in the shared link' },
-                { status: 404, headers }
-            );
+            return res.status(404).json({
+                success: false,
+                error: 'No files found in the shared link'
+            });
         }
 
         // Check if it's a folder (multiple files) or single file
@@ -175,41 +175,32 @@ export async function POST(request) {
             });
 
             if (downloadResponse.data.errno !== 0) {
-                return Response.json(
-                    {
-                        success: false,
-                        error: `Failed to get download link: ${downloadResponse.data.errmsg || 'Unknown error'}`
-                    },
-                    { status: 400, headers }
-                );
+                return res.status(400).json({
+                    success: false,
+                    error: `Failed to get download link: ${downloadResponse.data.errmsg || 'Unknown error'}`
+                });
             }
 
             const downloadLink = downloadResponse.data.dlink || downloadResponse.data.list?.[0]?.dlink;
 
             if (!downloadLink) {
-                return Response.json(
-                    {
-                        success: false,
-                        error: 'Could not retrieve download link. The file may require PC client download.'
-                    },
-                    { status: 400, headers }
-                );
+                return res.status(400).json({
+                    success: false,
+                    error: 'Could not retrieve download link. The file may require PC client download.'
+                });
             }
 
-            return Response.json(
-                {
-                    success: true,
-                    data: {
-                        fileName: file.server_filename,
-                        fileSize: formatFileSize(file.size),
-                        fileSizeBytes: file.size,
-                        downloadLink: downloadLink,
-                        isFolder: false,
-                        thumbUrl: file.thumbs?.url3 || null,
-                    }
-                },
-                { status: 200, headers }
-            );
+            return res.status(200).json({
+                success: true,
+                data: {
+                    fileName: file.server_filename,
+                    fileSize: formatFileSize(file.size),
+                    fileSizeBytes: file.size,
+                    downloadLink: downloadLink,
+                    isFolder: false,
+                    thumbUrl: file.thumbs?.url3 || null,
+                }
+            });
         } else {
             const files = fileList.map(file => ({
                 fileName: file.server_filename,
@@ -220,19 +211,16 @@ export async function POST(request) {
                 thumbUrl: file.thumbs?.url3 || null,
             }));
 
-            return Response.json(
-                {
-                    success: true,
-                    data: {
-                        isFolder: true,
-                        folderName: 'Shared Folder',
-                        totalFiles: files.length,
-                        files: files,
-                        message: 'This is a folder share. Download links for individual files need to be fetched separately.'
-                    }
-                },
-                { status: 200, headers }
-            );
+            return res.status(200).json({
+                success: true,
+                data: {
+                    isFolder: true,
+                    folderName: 'Shared Folder',
+                    totalFiles: files.length,
+                    files: files,
+                    message: 'This is a folder share. Download links for individual files need to be fetched separately.'
+                }
+            });
         }
 
     } catch (error) {
@@ -258,21 +246,9 @@ export async function POST(request) {
             errorMessage = error.message;
         }
 
-        return Response.json(
-            { success: false, error: errorMessage },
-            { status: 500, headers }
-        );
+        return res.status(500).json({
+            success: false,
+            error: errorMessage
+        });
     }
-}
-
-// Handle OPTIONS for CORS
-export async function OPTIONS() {
-    return new Response(null, {
-        status: 200,
-        headers: {
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'POST, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type',
-        },
-    });
 }
