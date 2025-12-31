@@ -39,6 +39,28 @@ function formatFileSize(bytes) {
     return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
 }
 
+// Retry helper with exponential backoff
+async function withRetry(fn, retries = 3) {
+    try {
+        return await fn();
+    } catch (err) {
+        if (retries === 0) throw err;
+
+        // Only retry on network errors, not API errors
+        const shouldRetry = err.code === 'ECONNRESET' ||
+            err.code === 'ETIMEDOUT' ||
+            err.code === 'ECONNREFUSED' ||
+            err.code === 'EPIPE';
+
+        if (!shouldRetry) throw err;
+
+        const delay = 500 * (4 - retries); // 500ms, 1000ms, 1500ms
+        console.log(`Retry attempt ${4 - retries} after ${delay}ms due to ${err.code}`);
+        await new Promise(r => setTimeout(r, delay));
+        return withRetry(fn, retries - 1);
+    }
+}
+
 // Rate limiting map
 const rateLimitMap = new Map();
 const RATE_LIMIT = 10;
@@ -140,16 +162,19 @@ export default async function handler(req, res) {
             'Sec-Fetch-Site': 'same-origin',
             'Cache-Control': 'no-cache',
             'Pragma': 'no-cache',
+            'Connection': 'close', // Force HTTP/1.1, avoid HTTP/2 flakiness
         };
 
-        const listResponse = await axios.get(listUrl, {
-            params: listParams,
-            headers: enhancedHeaders,
-            httpsAgent: httpsAgent,
-            timeout: 50000,
-            maxContentLength: Infinity,
-            maxBodyLength: Infinity,
-        });
+        const listResponse = await withRetry(() =>
+            axios.get(listUrl, {
+                params: listParams,
+                headers: enhancedHeaders,
+                httpsAgent: httpsAgent,
+                timeout: 50000,
+                maxContentLength: Infinity,
+                maxBodyLength: Infinity,
+            })
+        );
 
         console.log('List response errno:', listResponse.data.errno);
 
@@ -187,14 +212,16 @@ export default async function handler(req, res) {
                 fid_list: `[${file.fs_id}]`,
             };
 
-            const downloadResponse = await axios.get(downloadUrl, {
-                params: downloadParams,
-                headers: enhancedHeaders,
-                httpsAgent: httpsAgent,
-                timeout: 50000,
-                maxContentLength: Infinity,
-                maxBodyLength: Infinity,
-            });
+            const downloadResponse = await withRetry(() =>
+                axios.get(downloadUrl, {
+                    params: downloadParams,
+                    headers: enhancedHeaders,
+                    httpsAgent: httpsAgent,
+                    timeout: 50000,
+                    maxContentLength: Infinity,
+                    maxBodyLength: Infinity,
+                })
+            );
 
             if (downloadResponse.data.errno !== 0) {
                 return res.status(400).json({
