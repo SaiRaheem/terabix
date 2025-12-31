@@ -145,12 +145,23 @@ export default async function handler(req, res) {
             page: '1',
             order: 'time',
             desc: '1',
+            _: Date.now(), // Add timestamp to prevent caching
+        };
+
+        // Add more browser-like headers
+        const enhancedHeaders = {
+            ...headers,
+            'Sec-Fetch-Dest': 'empty',
+            'Sec-Fetch-Mode': 'cors',
+            'Sec-Fetch-Site': 'same-origin',
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache',
         };
 
 
         const listResponse = await axios.get(listUrl, {
             params: listParams,
-            headers,
+            headers: enhancedHeaders,
             timeout: 30000,
         });
 
@@ -194,7 +205,7 @@ export default async function handler(req, res) {
 
             const downloadResponse = await axios.get(downloadUrl, {
                 params: downloadParams,
-                headers,
+                headers: enhancedHeaders,
                 timeout: 30000,
             });
 
