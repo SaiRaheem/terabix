@@ -18,7 +18,7 @@ const DownloadForm: React.FC<DownloadFormProps> = ({ onSubmit, isLoading }) => {
         if (!link.trim()) {
             newErrors.link = 'Terabox link is required';
             isValid = false;
-        } else if (!link.includes('terabox.com/s/') && !link.includes('1024terabox.com/s/')) {
+        } else if (!link.includes('terabox.com/s/') && !link.includes('1024terabox.com/s/') && !link.includes('terabox.app/')) {
             newErrors.link = 'Invalid Terabox share link format';
             isValid = false;
         }
@@ -26,9 +26,6 @@ const DownloadForm: React.FC<DownloadFormProps> = ({ onSubmit, isLoading }) => {
         // Validate cookies
         if (!cookies.trim()) {
             newErrors.cookies = 'Cookie is required';
-            isValid = false;
-        } else if (!cookies.includes('ndus=')) {
-            newErrors.cookies = 'Cookie must contain "ndus=" value';
             isValid = false;
         }
 
@@ -67,13 +64,13 @@ const DownloadForm: React.FC<DownloadFormProps> = ({ onSubmit, isLoading }) => {
             {/* Cookie Input */}
             <div className="space-y-2">
                 <label htmlFor="cookies" className="block text-sm font-semibold text-gray-700 dark:text-gray-200">
-                    Cookie (ndus value)
+                    Terabox Cookies
                 </label>
                 <textarea
                     id="cookies"
                     value={cookies}
                     onChange={(e) => setCookies(e.target.value)}
-                    placeholder="ndus=YOUR_COOKIE_VALUE_HERE"
+                    placeholder="Paste all cookies from terabox.app or 1024terabox.com"
                     rows={3}
                     className="input-field resize-none"
                     disabled={isLoading}
@@ -82,7 +79,7 @@ const DownloadForm: React.FC<DownloadFormProps> = ({ onSubmit, isLoading }) => {
                     <p className="text-red-500 text-sm mt-1 animate-fade-in">{errors.cookies}</p>
                 )}
                 <p className="text-xs text-gray-500 dark:text-gray-400">
-                    Paste your entire cookie string or just the ndus value
+                    Paste your entire cookie string from the browser
                 </p>
             </div>
 
