@@ -12,11 +12,17 @@ function App() {
     const [error, setError] = useState<string | null>(null);
     const [fileData, setFileData] = useState<FileMetadata | FolderContent | null>(null);
     const [isFolder, setIsFolder] = useState(false);
+    const [requiresVerification, setRequiresVerification] = useState(false);
+    const [shareLink, setShareLink] = useState<string | null>(null);
+    const [verificationMessage, setVerificationMessage] = useState<string | null>(null);
 
     const handleSubmit = async (link: string, cookies: string) => {
         setIsLoading(true);
         setError(null);
         setFileData(null);
+        setRequiresVerification(false);
+        setShareLink(null);
+        setVerificationMessage(null);
 
         try {
             const response = await fetchDownloadLink(link, cookies);
@@ -25,6 +31,13 @@ function App() {
                 setFileData(response.data);
                 // Check if it's a folder by checking for 'files' property
                 setIsFolder('files' in response.data);
+
+                // Handle verification requirement
+                if ('requiresVerification' in response && response.requiresVerification) {
+                    setRequiresVerification(true);
+                    setShareLink(response.shareLink || null);
+                    setVerificationMessage(response.message || null);
+                }
             } else {
                 setError(response.error || 'Failed to fetch download link');
             }
@@ -39,6 +52,9 @@ function App() {
         setFileData(null);
         setError(null);
         setIsFolder(false);
+        setRequiresVerification(false);
+        setShareLink(null);
+        setVerificationMessage(null);
     };
 
     return (
@@ -73,7 +89,13 @@ function App() {
                         </>
                     ) : (
                         <>
-                            <FileDisplay data={fileData} isFolder={isFolder} />
+                            <FileDisplay
+                                data={fileData}
+                                isFolder={isFolder}
+                                requiresVerification={requiresVerification}
+                                shareLink={shareLink}
+                                verificationMessage={verificationMessage}
+                            />
                             <button
                                 onClick={handleReset}
                                 className="btn-secondary flex items-center gap-2"

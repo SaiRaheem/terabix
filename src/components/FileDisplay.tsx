@@ -4,9 +4,12 @@ import type { FileMetadata, FolderContent } from '../types';
 interface FileDisplayProps {
     data: FileMetadata | FolderContent;
     isFolder: boolean;
+    requiresVerification?: boolean;
+    shareLink?: string | null;
+    verificationMessage?: string | null;
 }
 
-const FileDisplay: React.FC<FileDisplayProps> = ({ data, isFolder }) => {
+const FileDisplay: React.FC<FileDisplayProps> = ({ data, isFolder, requiresVerification, shareLink, verificationMessage }) => {
     if (isFolder) {
         const folderData = data as FolderContent;
         return (
@@ -90,35 +93,73 @@ const FileDisplay: React.FC<FileDisplayProps> = ({ data, isFolder }) => {
 
             {/* Download Buttons */}
             <div className="space-y-3">
-                <a
-                    href={fileData.download_link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="btn-primary w-full flex items-center justify-center gap-2 no-underline"
-                >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                    </svg>
-                    <span>Direct Download</span>
-                </a>
+                {requiresVerification ? (
+                    <>
+                        {/* Verification Required Message */}
+                        <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 border-2 border-yellow-200 dark:border-yellow-800 rounded-lg">
+                            <div className="flex items-start gap-3">
+                                <svg className="w-6 h-6 text-yellow-500 flex-shrink-0 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                </svg>
+                                <div>
+                                    <h4 className="font-bold text-yellow-800 dark:text-yellow-200 mb-1">Manual Download Required</h4>
+                                    <p className="text-sm text-yellow-700 dark:text-yellow-300">
+                                        {verificationMessage || 'Terabox requires manual verification for this file.'}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
 
-                {fileData.proxy_url && (
-                    <a
-                        href={fileData.proxy_url}
-                        className="btn-secondary w-full flex items-center justify-center gap-2 no-underline"
-                    >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                        </svg>
-                        <span>Download via Proxy</span>
-                    </a>
+                        {/* Manual Download Button */}
+                        {shareLink && (
+                            <a
+                                href={shareLink}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="btn-primary w-full flex items-center justify-center gap-2 no-underline"
+                            >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                </svg>
+                                <span>Open in Terabox to Download</span>
+                            </a>
+                        )}
+                    </>
+                ) : (
+                    <>
+                        {fileData.download_link && (
+                            <a
+                                href={fileData.download_link}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="btn-primary w-full flex items-center justify-center gap-2 no-underline"
+                            >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                </svg>
+                                <span>Direct Download</span>
+                            </a>
+                        )}
+
+                        {fileData.proxy_url && (
+                            <a
+                                href={fileData.proxy_url}
+                                className="btn-secondary w-full flex items-center justify-center gap-2 no-underline"
+                            >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                </svg>
+                                <span>Download via Proxy</span>
+                            </a>
+                        )}
+                    </>
                 )}
             </div>
 
             {/* Info Note */}
             <div className="mt-6 p-4 glass rounded-lg">
                 <p className="text-xs text-gray-600 dark:text-gray-300">
-                    💡 <strong>Tip:</strong> Use "Direct Download" for faster speeds. Use "Download via Proxy" if direct download doesn't work.
+                    💡 <strong>Tip:</strong> {requiresVerification ? 'Click the button above to download from Terabox directly.' : 'Use "Direct Download" for faster speeds. Use "Download via Proxy" if direct download doesn\'t work.'}
                 </p>
             </div>
         </div>

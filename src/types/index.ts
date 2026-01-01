@@ -26,6 +26,8 @@ export interface ApiResponse {
     data?: FileMetadata | FolderContent;
     error?: string;
     message?: string;
+    requiresVerification?: boolean;
+    shareLink?: string;
 }
 
 export interface TeraboxInitResponse {
