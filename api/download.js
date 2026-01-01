@@ -228,12 +228,12 @@ export default async function handler(req, res) {
                         success: true,
                         requiresVerification: true,
                         data: {
-                            fileName: file.server_filename,
-                            fileSize: formatFileSize(file.size),
-                            fileSizeBytes: file.size,
-                            downloadLink: null,
+                            file_name: file.server_filename,
+                            file_size: formatFileSize(file.size),
+                            size_bytes: file.size,
+                            download_link: null,
                             isFolder: false,
-                            thumbUrl: file.thumbs?.url3 || file.thumbs?.url2 || file.thumbs?.url1 || null,
+                            thumbnail: file.thumbs?.url3 || file.thumbs?.url2 || file.thumbs?.url1 || null,
                         },
                         message: 'File details retrieved. Download requires manual verification.',
                         shareLink: `https://${apiDomain}/sharing/link?surl=${surl}`
@@ -258,29 +258,29 @@ export default async function handler(req, res) {
             return res.status(200).json({
                 success: true,
                 data: {
-                    fileName: file.server_filename,
-                    fileSize: formatFileSize(file.size),
-                    fileSizeBytes: file.size,
-                    downloadLink: downloadLink,
+                    file_name: file.server_filename,
+                    file_size: formatFileSize(file.size),
+                    size_bytes: file.size,
+                    download_link: downloadLink,
                     isFolder: false,
-                    thumbUrl: file.thumbs?.url3 || null,
+                    thumbnail: file.thumbs?.url3 || null,
                 }
             });
         } else {
             const files = fileList.map(file => ({
-                fileName: file.server_filename,
-                fileSize: formatFileSize(file.size),
-                fileSizeBytes: file.size,
-                fsId: file.fs_id,
-                isDir: file.isdir === 1,
-                thumbUrl: file.thumbs?.url3 || null,
+                file_name: file.server_filename,
+                file_size: formatFileSize(file.size),
+                size_bytes: file.size,
+                fs_id: file.fs_id,
+                isdir: file.isdir,
+                thumbnail: file.thumbs?.url3 || null,
             }));
 
             return res.status(200).json({
                 success: true,
                 data: {
                     isFolder: true,
-                    folderName: 'Shared Folder',
+                    folder_name: 'Shared Folder',
                     totalFiles: files.length,
                     files: files,
                     message: 'This is a folder share. Download links for individual files need to be fetched separately.'
