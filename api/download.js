@@ -213,9 +213,21 @@ export default async function handler(req, res) {
             );
 
             if (downloadResponse.data.errno !== 0) {
+                const errorMsg = downloadResponse.data.errmsg || 'Unknown error';
+
+                // Special handling for CAPTCHA verification
+                if (errorMsg.includes('verify') || errorMsg.includes('captcha')) {
+                    return res.status(400).json({
+                        success: false,
+                        error: 'Terabox requires CAPTCHA verification',
+                        message: 'Please complete these steps:\n1. Open the share link in your browser\n2. Click download and complete the CAPTCHA\n3. Get fresh cookies after verification\n4. Try again with the new cookies',
+                        shareLink: `https://${apiDomain}/sharing/link?surl=${surl}`
+                    });
+                }
+
                 return res.status(400).json({
                     success: false,
-                    error: `Failed to get download link: ${downloadResponse.data.errmsg || 'Unknown error'}`
+                    error: `Failed to get download link: ${errorMsg}`
                 });
             }
 
