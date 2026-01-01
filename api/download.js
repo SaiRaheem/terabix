@@ -144,7 +144,7 @@ export default async function handler(req, res) {
         console.log('Fetching file list directly...');
         const listUrl = `https://${apiDomain}/share/list`;
         const listParams = {
-            shorturl: surl,  // Try shorturl again
+            shorturl: surl,
             root: '1',
         };
 
@@ -155,7 +155,7 @@ export default async function handler(req, res) {
             'Sec-Fetch-Site': 'same-origin',
             'Cache-Control': 'no-cache',
             'Pragma': 'no-cache',
-            'Connection': 'close', // Force HTTP/1.1, avoid HTTP/2 flakiness
+            'Connection': 'close',
         };
 
         const listResponse = await withRetry(() =>
@@ -199,7 +199,7 @@ export default async function handler(req, res) {
             const downloadParams = {
                 shorturl: surl,
                 fid_list: `[${file.fs_id}]`,
-                sign: '',  // Try with empty sign
+                sign: '',
                 timestamp: Math.floor(Date.now() / 1000),
                 devuid: '',
                 clienttype: '0',
@@ -222,15 +222,22 @@ export default async function handler(req, res) {
             if (downloadResponse.data.errno !== 0) {
                 const errorMsg = downloadResponse.data.errmsg || 'Unknown error';
 
-                // Special handling for CAPTCHA verification
+                // Special handling for CAPTCHA verification - return file details anyway
                 if (errorMsg.includes('verify') || errorMsg.includes('captcha')) {
                     return res.status(200).json({
                         success: true,
                         requiresVerification: true,
                         data: {
-                            message: 'Please complete these steps:\n1. Open the share link in your browser\n2. Click download and complete the CAPTCHA\n3. Get fresh cookies after verification\n4. Try again with the new cookies',
-                            shareLink: `https://${apiDomain}/sharing/link?surl=${surl}`
-                        });
+                            fileName: file.server_filename,
+                            fileSize: formatFileSize(file.size),
+                            fileSizeBytes: file.size,
+                            downloadLink: null,
+                            isFolder: false,
+                            thumbUrl: file.thumbs?.url3 || file.thumbs?.url2 || file.thumbs?.url1 || null,
+                        },
+                        message: 'File details retrieved. Download requires manual verification.',
+                        shareLink: `https://${apiDomain}/sharing/link?surl=${surl}`
+                    });
                 }
 
                 return res.status(400).json({
