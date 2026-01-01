@@ -144,18 +144,8 @@ export default async function handler(req, res) {
         console.log('Fetching file list directly...');
         const listUrl = `https://${apiDomain}/share/list`;
         const listParams = {
-            surl: surl,  // Use surl, not shorturl
-            app_id: '250',
-            channel: 'dubox',
-            clienttype: '0',
-            web: '1',
+            shorturl: surl,  // Try shorturl again
             root: '1',
-            dir: '/',
-            num: '100',
-            page: '1',
-            order: 'time',
-            desc: '1',
-            _: Date.now(),
         };
 
         const enhancedHeaders = {
@@ -207,11 +197,7 @@ export default async function handler(req, res) {
 
             const downloadUrl = `https://${apiDomain}/share/download`;
             const downloadParams = {
-                surl: surl,  // Use surl, not shorturl
-                app_id: '250',
-                channel: 'dubox',
-                clienttype: '0',
-                web: '1',
+                shorturl: surl,  // Try shorturl
                 fid_list: `[${file.fs_id}]`,
             };
 
