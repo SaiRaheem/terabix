@@ -197,8 +197,15 @@ export default async function handler(req, res) {
 
             const downloadUrl = `https://${apiDomain}/share/download`;
             const downloadParams = {
-                shorturl: surl,  // Try shorturl
+                shorturl: surl,
                 fid_list: `[${file.fs_id}]`,
+                sign: '',  // Try with empty sign
+                timestamp: Math.floor(Date.now() / 1000),
+                devuid: '',
+                clienttype: '0',
+                app_id: '250',
+                web: '1',
+                channel: 'dubox',
             };
 
             const downloadResponse = await withRetry(() =>
