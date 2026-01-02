@@ -67,24 +67,46 @@ async function handleGetDownloadLink({ surl, fs_id, domain = 'www.terabox.app' }
 }
 
 /**
- * Get all cookies for a domain
+ * Get all cookies from ALL Terabox domains
  */
 async function handleGetCookies(domain) {
     try {
         console.log('Getting cookies for domain:', domain);
 
-        // Get cookies for both .domain and domain (to catch all variations)
-        const cookiesWithDot = await chrome.cookies.getAll({ domain: `.${domain}` });
-        const cookiesWithoutDot = await chrome.cookies.getAll({ domain: domain });
+        // Check multiple Terabox domains
+        const domains = [
+            domain,                      // www.terabox.app
+            `.${domain}`,                // .terabox.app
+            '1024terabox.com',           // 1024terabox.com
+            '.1024terabox.com',          // .1024terabox.com
+            'dm.1024terabox.com',        // dm.1024terabox.com
+            'terabox.com',               // terabox.com
+            '.terabox.com',              // .terabox.com
+            'dm.terabox.app',            // dm.terabox.app
+        ];
 
-        // Combine and deduplicate
-        const allCookies = [...cookiesWithDot, ...cookiesWithoutDot];
+        let allCookies = [];
+
+        // Get cookies from all domains
+        for (const d of domains) {
+            try {
+                const cookies = await chrome.cookies.getAll({ domain: d });
+                if (cookies.length > 0) {
+                    console.log(`Found ${cookies.length} cookies on ${d}:`, cookies.map(c => c.name));
+                    allCookies.push(...cookies);
+                }
+            } catch (err) {
+                // Ignore errors for individual domains
+            }
+        }
+
+        // Deduplicate by cookie name (keep the first occurrence)
         const uniqueCookies = Array.from(new Map(allCookies.map(c => [c.name, c])).values());
 
-        console.log('Found cookies:', uniqueCookies.length, uniqueCookies.map(c => c.name));
+        console.log('Total unique cookies found:', uniqueCookies.length, uniqueCookies.map(c => c.name));
 
         const cookieString = uniqueCookies.map(c => `${c.name}=${c.value}`).join('; ');
-        console.log('Cookie string length:', cookieString.length);
+        console.log('Final cookie string length:', cookieString.length);
 
         return cookieString;
     } catch (error) {
