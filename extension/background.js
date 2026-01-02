@@ -71,8 +71,22 @@ async function handleGetDownloadLink({ surl, fs_id, domain = 'www.terabox.app' }
  */
 async function handleGetCookies(domain) {
     try {
-        const cookies = await chrome.cookies.getAll({ domain: `.${domain}` });
-        return cookies.map(c => `${c.name}=${c.value}`).join('; ');
+        console.log('Getting cookies for domain:', domain);
+
+        // Get cookies for both .domain and domain (to catch all variations)
+        const cookiesWithDot = await chrome.cookies.getAll({ domain: `.${domain}` });
+        const cookiesWithoutDot = await chrome.cookies.getAll({ domain: domain });
+
+        // Combine and deduplicate
+        const allCookies = [...cookiesWithDot, ...cookiesWithoutDot];
+        const uniqueCookies = Array.from(new Map(allCookies.map(c => [c.name, c])).values());
+
+        console.log('Found cookies:', uniqueCookies.length, uniqueCookies.map(c => c.name));
+
+        const cookieString = uniqueCookies.map(c => `${c.name}=${c.value}`).join('; ');
+        console.log('Cookie string length:', cookieString.length);
+
+        return cookieString;
     } catch (error) {
         console.error('Error getting cookies:', error);
         throw error;
