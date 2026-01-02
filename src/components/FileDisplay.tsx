@@ -19,36 +19,36 @@ const FileDisplay: React.FC<FileDisplayProps> = ({
     verificationMessage
 }) => {
     // Check if it's a video file with streaming URL
-    const fileData = data as FileMetadata;
-    const isVideo = fileData.category === 1; // category 1 = video
-    const hasStreamingUrl = fileData.streaming_url && fileData.streaming_url.length > 0;
+    const singleFileData = data as FileMetadata;
+    const isVideo = singleFileData.category === 1; // category 1 = video
+    const hasStreamingUrl = singleFileData.streaming_url && singleFileData.streaming_url.length > 0;
 
     // If it's a video with streaming URL, show video player
     if (!isFolder && isVideo && hasStreamingUrl) {
         return (
             <div className="space-y-6 animate-fade-in">
                 <VideoPlayer
-                    streamingUrl={fileData.streaming_url!}
-                    fileName={fileData.file_name}
-                    thumbnail={fileData.thumbnail}
+                    streamingUrl={singleFileData.streaming_url!}
+                    fileName={singleFileData.file_name}
+                    thumbnail={singleFileData.thumbnail}
                 />
 
                 {/* Show file info below player */}
                 <div className="card">
                     <div className="flex items-center gap-4 mb-4">
-                        {fileData.thumbnail && (
+                        {singleFileData.thumbnail && (
                             <img
-                                src={fileData.thumbnail}
-                                alt={fileData.file_name}
+                                src={singleFileData.thumbnail}
+                                alt={singleFileData.file_name}
                                 className="w-20 h-20 object-cover rounded-lg"
                             />
                         )}
                         <div className="flex-1">
                             <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-1">
-                                {fileData.file_name}
+                                {singleFileData.file_name}
                             </h3>
                             <p className="text-gray-600 dark:text-gray-300">
-                                Size: {fileData.file_size}
+                                Size: {singleFileData.file_size}
                             </p>
                         </div>
                     </div>
@@ -104,11 +104,12 @@ const FileDisplay: React.FC<FileDisplayProps> = ({
         );
     }
 
-    const fileData = data as FileMetadata;
+    // Single file display
+    const fileInfo = data as FileMetadata;
     return (
         <div className="card w-full max-w-2xl animate-slide-up">
             {/* Thumbnail */}
-            {fileData.thumbnail && (
+            {fileInfo.thumbnail && (
                 <div className="mb-6 rounded-xl overflow-hidden">
                     <img
                         src={fileData.thumbnail}
@@ -175,29 +176,29 @@ const FileDisplay: React.FC<FileDisplayProps> = ({
                     </>
                 ) : (
                     <>
-                        {fileData.download_link && (
+                        {fileInfo.download_link ? (
                             <a
-                                href={fileData.download_link}
+                                href={fileInfo.download_link || shareLink || '#'}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="btn-primary w-full flex items-center justify-center gap-2 no-underline"
+                                className="btn-primary w-full flex items-center justify-center gap-2"
                             >
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                                 </svg>
-                                <span>Direct Download</span>
+                                Download File
                             </a>
-                        )}
-
-                        {fileData.proxy_url && (
+                        ) : (
                             <a
-                                href={fileData.proxy_url}
-                                className="btn-secondary w-full flex items-center justify-center gap-2 no-underline"
+                                href={shareLink || '#'}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="btn-secondary w-full flex items-center justify-center gap-2"
                             >
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                                 </svg>
-                                <span>Download via Proxy</span>
+                                Open in Terabox to Download
                             </a>
                         )}
                     </>
