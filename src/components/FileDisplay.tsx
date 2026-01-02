@@ -1,5 +1,7 @@
-
+```
+import React from 'react';
 import type { FileMetadata, FolderContent } from '../types';
+import VideoPlayer from './VideoPlayer';
 
 interface FileDisplayProps {
     data: FileMetadata | FolderContent;
@@ -9,7 +11,53 @@ interface FileDisplayProps {
     verificationMessage?: string | null;
 }
 
-const FileDisplay: React.FC<FileDisplayProps> = ({ data, isFolder, requiresVerification, shareLink, verificationMessage }) => {
+const FileDisplay: React.FC<FileDisplayProps> = ({
+    data,
+    isFolder,
+    requiresVerification,
+    shareLink,
+    verificationMessage
+}) => {
+    // Check if it's a video file with streaming URL
+    const fileData = data as FileMetadata;
+    const isVideo = fileData.category === 1; // category 1 = video
+    const hasStreamingUrl = fileData.streaming_url && fileData.streaming_url.length > 0;
+
+    // If it's a video with streaming URL, show video player
+    if (!isFolder && isVideo && hasStreamingUrl) {
+        return (
+            <div className="space-y-6 animate-fade-in">
+                <VideoPlayer
+                    streamingUrl={fileData.streaming_url!}
+                    fileName={fileData.file_name}
+                    thumbnail={fileData.thumbnail}
+                />
+                
+                {/* Show file info below player */}
+                <div className="card">
+                    <div className="flex items-center gap-4 mb-4">
+                        {fileData.thumbnail && (
+                            <img
+                                src={fileData.thumbnail}
+                                alt={fileData.file_name}
+                                className="w-20 h-20 object-cover rounded-lg"
+                            />
+                        )}
+                        <div className="flex-1">
+                            <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-1">
+                                {fileData.file_name}
+                            </h3>
+                            <p className="text-gray-600 dark:text-gray-300">
+                                Size: {fileData.file_size}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    // Original file display for non-streaming files
     if (isFolder) {
         const folderData = data as FolderContent;
         return (

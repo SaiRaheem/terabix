@@ -8,13 +8,14 @@ export interface DownloadRequest {
 export interface FileMetadata {
     file_name: string;
     file_size: string; // Human-readable size (e.g., "1.5 GB")
-    size_bytes: number;
-    thumbnail?: string;
+    size_bytes?: string;
     download_link: string | null;
-    proxy_url?: string;
-    fs_id?: number;
+    streaming_url?: string | null;
+    category?: number; // 1=video, 2=audio, 3=image, 4=doc
+    thumbnail?: string | null;
+    isFolder: boolean;
+    fs_id?: string | number;
     surl?: string;
-    isdir?: number;
 }
 
 export interface FolderContent {
