@@ -3,9 +3,10 @@ import { useState } from 'react';
 interface DownloadFormProps {
     onSubmit: (link: string, cookies: string) => void;
     isLoading: boolean;
+    extensionDetected?: boolean;
 }
 
-const DownloadForm: React.FC<DownloadFormProps> = ({ onSubmit, isLoading }) => {
+const DownloadForm: React.FC<DownloadFormProps> = ({ onSubmit, isLoading, extensionDetected = false }) => {
     const [link, setLink] = useState('');
     const [cookies, setCookies] = useState('');
     const [errors, setErrors] = useState({ link: '', cookies: '' });

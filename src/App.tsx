@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import DownloadForm from './components/DownloadForm';
 import FileDisplay from './components/FileDisplay';
 import ThemeToggle from './components/ThemeToggle';
 import CookieInstructions from './components/CookieInstructions';
 import CaptchaModal from './components/CaptchaModal';
 import { fetchDownloadLink, getDownloadLinkFromBrowser } from './utils/api';
+import { isExtensionInstalled, getDownloadLinkViaExtension, getCookiesViaExtension } from './utils/extension';
 import type { FileMetadata, FolderContent } from './types';
 import './index.css';
 
@@ -18,6 +19,19 @@ function App() {
     const [verificationMessage, setVerificationMessage] = useState<string | null>(null);
     const [showCaptchaModal, setShowCaptchaModal] = useState(false);
     const [currentLink, setCurrentLink] = useState<string>('');
+    const [extensionDetected, setExtensionDetected] = useState(false);
+
+    // Check for extension on mount
+    useEffect(() => {
+        // Wait a bit for extension to inject
+        setTimeout(() => {
+            const detected = isExtensionInstalled();
+            setExtensionDetected(detected);
+            if (detected) {
+                console.log('✅ Terabox Extension detected!');
+            }
+        }, 500);
+    }, []);
 
     const handleSubmit = async (link: string, cookies: string) => {
         setIsLoading(true);
