@@ -92,7 +92,7 @@ const FileDisplay: React.FC<FileDisplayProps> = ({
                                     </p>
                                 </div>
                             </div>
-                            {file.isdir !== 1 && (
+                            {!file.isFolder && (
                                 <span className="text-xs text-gray-500 dark:text-gray-400 ml-4">
                                     Individual file downloads coming soon
                                 </span>
@@ -112,8 +112,8 @@ const FileDisplay: React.FC<FileDisplayProps> = ({
             {fileInfo.thumbnail && (
                 <div className="mb-6 rounded-xl overflow-hidden">
                     <img
-                        src={fileData.thumbnail}
-                        alt={fileData.file_name}
+                        src={fileInfo.thumbnail}
+                        alt={fileInfo.file_name}
                         className="w-full h-64 object-cover"
                     />
                 </div>
@@ -126,7 +126,7 @@ const FileDisplay: React.FC<FileDisplayProps> = ({
                         File Name
                     </h3>
                     <p className="text-lg font-bold text-gray-800 dark:text-white break-all">
-                        {fileData.file_name}
+                        {fileInfo.file_name}
                     </p>
                 </div>
 
@@ -135,7 +135,7 @@ const FileDisplay: React.FC<FileDisplayProps> = ({
                         File Size
                     </h3>
                     <p className="text-lg font-semibold gradient-text">
-                        {fileData.file_size}
+                        {fileInfo.file_size}
                     </p>
                 </div>
             </div>
