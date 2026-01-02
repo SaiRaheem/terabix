@@ -76,7 +76,7 @@ function App() {
                     if (extensionDetected) {
                         console.log('Using extension to get download link...');
                         try {
-                            const result = await getDownloadLinkViaExtension(
+                            const downloadLink = await getDownloadLinkViaExtension(
                                 fileData.surl,
                                 fileData.fs_id,
                                 response.apiDomain || 'www.terabox.app'
@@ -84,7 +84,7 @@ function App() {
 
                             setFileData({
                                 ...fileData,
-                                download_link: result.downloadLink
+                                download_link: downloadLink
                             });
                             setIsFolder(false);
                             setRequiresVerification(false);
