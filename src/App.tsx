@@ -200,7 +200,11 @@ function App() {
                     {!fileData ? (
                         <>
                             <CookieInstructions />
-                            <DownloadForm onSubmit={handleSubmit} isLoading={isLoading} />
+                            <DownloadForm
+                                onSubmit={handleSubmit}
+                                isLoading={isLoading}
+                                extensionDetected={extensionDetected}
+                            />
                         </>
                     ) : (
                         <>
