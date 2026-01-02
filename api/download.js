@@ -191,6 +191,9 @@ export default async function handler(req, res) {
             });
         }
 
+        // Log full file object to see what's available
+        console.log('Full file object:', JSON.stringify(fileList[0], null, 2));
+
         // Check if it's a folder (multiple files) or single file
         if (fileList.length === 1) {
             const file = fileList[0];
@@ -220,6 +223,17 @@ export default async function handler(req, res) {
                 })
             );
 
+            // Extract streaming URL if available (for videos)
+            let streamingUrl = null;
+            if (file.category === 1 || file.category === 3) { // Video or audio
+                // Try different streaming URL formats
+                streamingUrl = file.dlink || file.thumbs?.url4 || file.thumbs?.url3;
+
+                // Some files have a 'streaming_url' or 'preview_url'
+                if (file.streaming_url) streamingUrl = file.streaming_url;
+                if (file.preview_url) streamingUrl = file.preview_url;
+            }
+
             if (downloadResponse.data.errno !== 0) {
                 const errorMsg = downloadResponse.data.errmsg || 'Unknown error';
 
@@ -233,7 +247,9 @@ export default async function handler(req, res) {
                             file_size: formatFileSize(file.size),
                             size_bytes: file.size,
                             download_link: null,
+                            streaming_url: streamingUrl,
                             isFolder: false,
+                            category: file.category, // 1=video, 2=audio, 3=image, 4=doc
                             thumbnail: file.thumbs?.url3 || file.thumbs?.url2 || file.thumbs?.url1 || null,
                         },
                         message: 'File details retrieved. Download requires manual verification.',
