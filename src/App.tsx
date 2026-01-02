@@ -3,6 +3,7 @@ import DownloadForm from './components/DownloadForm';
 import FileDisplay from './components/FileDisplay';
 import ThemeToggle from './components/ThemeToggle';
 import CookieInstructions from './components/CookieInstructions';
+import CaptchaModal from './components/CaptchaModal';
 import { fetchDownloadLink } from './utils/api';
 import type { FileMetadata, FolderContent } from './types';
 import './index.css';
@@ -15,6 +16,8 @@ function App() {
     const [requiresVerification, setRequiresVerification] = useState(false);
     const [shareLink, setShareLink] = useState<string | null>(null);
     const [verificationMessage, setVerificationMessage] = useState<string | null>(null);
+    const [showCaptchaModal, setShowCaptchaModal] = useState(false);
+    const [currentLink, setCurrentLink] = useState<string>('');
 
     const handleSubmit = async (link: string, cookies: string) => {
         setIsLoading(true);
@@ -23,6 +26,8 @@ function App() {
         setRequiresVerification(false);
         setShareLink(null);
         setVerificationMessage(null);
+        setShowCaptchaModal(false);
+        setCurrentLink(link);
 
         try {
             const response = await fetchDownloadLink(link, cookies);
@@ -37,6 +42,40 @@ function App() {
                     setRequiresVerification(true);
                     setShareLink(response.shareLink || null);
                     setVerificationMessage(response.message || null);
+                    setShowCaptchaModal(true);
+                }
+            } else {
+                setError(response.error || 'Failed to fetch download link');
+            }
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'An unexpected error occurred');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleCaptchaRetry = async (freshCookies: string) => {
+        if (!currentLink) return;
+
+        setShowCaptchaModal(false);
+        setIsLoading(true);
+        setError(null);
+
+        try {
+            const response = await fetchDownloadLink(currentLink, freshCookies);
+
+            if (response.success && response.data) {
+                setFileData(response.data);
+                setIsFolder('files' in response.data);
+
+                if ('requiresVerification' in response && response.requiresVerification) {
+                    setRequiresVerification(true);
+                    setShareLink(response.shareLink || null);
+                    setVerificationMessage(response.message || null);
+                    setShowCaptchaModal(true);
+                    setError('Verification still required. Please make sure you solved the CAPTCHA and copied fresh cookies.');
+                } else {
+                    setRequiresVerification(false);
                 }
             } else {
                 setError(response.error || 'Failed to fetch download link');
@@ -55,6 +94,8 @@ function App() {
         setRequiresVerification(false);
         setShareLink(null);
         setVerificationMessage(null);
+        setShowCaptchaModal(false);
+        setCurrentLink('');
     };
 
     return (
@@ -123,6 +164,15 @@ function App() {
                         </div>
                     )}
                 </div>
+
+                {/* CAPTCHA Modal */}
+                {showCaptchaModal && shareLink && (
+                    <CaptchaModal
+                        shareLink={shareLink}
+                        onRetry={handleCaptchaRetry}
+                        onCancel={() => setShowCaptchaModal(false)}
+                    />
+                )}
 
                 {/* Footer */}
                 <footer className="mt-20 text-center text-gray-600 dark:text-gray-400">
