@@ -1,0 +1,44 @@
+{
+    "manifest_version": 3,
+    "name": "Terabox Downloader Extension",
+    "version": "1.0.0",
+    "description": "Get direct download links from Terabox without verify_v2 errors",
+    "permissions": [
+        "cookies",
+        "storage",
+        "tabs"
+    ],
+    "host_permissions": [
+        "https://*.terabox.app/*",
+        "https://*.1024terabox.com/*",
+        "https://*.terabox.com/*",
+        "https://terabix-rose.vercel.app/*"
+    ],
+    "background": {
+        "service_worker": "background.js"
+    },
+    "content_scripts": [
+        {
+            "matches": [
+                "https://terabix-rose.vercel.app/*"
+            ],
+            "js": [
+                "content.js"
+            ],
+            "run_at": "document_end"
+        }
+    ],
+    "action": {
+        "default_popup": "popup.html",
+        "default_icon": {
+            "16": "icons/icon16.png",
+            "48": "icons/icon48.png",
+            "128": "icons/icon128.png"
+        }
+    },
+    "icons": {
+        "16": "icons/icon16.png",
+        "48": "icons/icon48.png",
+        "128": "icons/icon128.png"
+    }
+}
