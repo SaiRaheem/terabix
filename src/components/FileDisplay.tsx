@@ -1,7 +1,7 @@
-```
 import React from 'react';
 import type { FileMetadata, FolderContent } from '../types';
 import VideoPlayer from './VideoPlayer';
+
 
 interface FileDisplayProps {
     data: FileMetadata | FolderContent;
@@ -32,7 +32,7 @@ const FileDisplay: React.FC<FileDisplayProps> = ({
                     fileName={fileData.file_name}
                     thumbnail={fileData.thumbnail}
                 />
-                
+
                 {/* Show file info below player */}
                 <div className="card">
                     <div className="flex items-center gap-4 mb-4">
