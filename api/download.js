@@ -247,27 +247,6 @@ export default async function handler(req, res) {
                 })
             );
 
-            // Extract streaming URL if available (for videos)
-            let streamingUrl = null;
-            if (file.category === 1 || file.category === 3) { // Video or audio
-                console.log('Video/Audio file detected, checking for streaming URLs...');
-                console.log('Available URLs:', {
-                    dlink: file.dlink,
-                    thumbs_url3: file.thumbs?.url3,
-                    thumbs_url4: file.thumbs?.url4,
-                    streaming_url: file.streaming_url,
-                    preview_url: file.preview_url
-                });
-
-                // Try different streaming URL formats
-                streamingUrl = file.dlink || file.thumbs?.url4 || file.thumbs?.url3;
-
-                // Some files have a 'streaming_url' or 'preview_url'
-                if (file.streaming_url) streamingUrl = file.streaming_url;
-                if (file.preview_url) streamingUrl = file.preview_url;
-
-                console.log('Selected streaming URL:', streamingUrl);
-            }
 
             if (downloadResponse.data.errno !== 0) {
                 const errorMsg = downloadResponse.data.errmsg || 'Unknown error';
