@@ -37,18 +37,26 @@ function App() {
                 if ('needsBrowserDownload' in response && response.needsBrowserDownload) {
                     console.log('Server requested browser-based download');
 
+                    // Type guard: needsBrowserDownload only comes with FileMetadata
+                    const fileData = response.data as FileMetadata;
+
+                    if (!fileData.surl || !fileData.fs_id) {
+                        setError('Missing required data for browser download');
+                        return;
+                    }
+
                     try {
                         // Browser makes download request directly to Terabox
                         const downloadLink = await getDownloadLinkFromBrowser(
-                            response.data.surl,
-                            response.data.fs_id,
+                            fileData.surl,
+                            fileData.fs_id,
                             cookies,
                             response.apiDomain || 'www.terabox.app'
                         );
 
                         // Success! Got download link from browser
                         setFileData({
-                            ...response.data,
+                            ...fileData,
                             download_link: downloadLink
                         });
                         setIsFolder(false);
@@ -59,10 +67,10 @@ function App() {
                         console.error('Browser download failed:', browserError);
 
                         // Browser request also failed - show file info with manual download
-                        setFileData(response.data);
+                        setFileData(fileData);
                         setIsFolder(false);
                         setRequiresVerification(true);
-                        setShareLink(`https://${response.apiDomain || 'www.terabox.app'}/sharing/link?surl=${response.data.surl}`);
+                        setShareLink(`https://${response.apiDomain || 'www.terabox.app'}/sharing/link?surl=${fileData.surl}`);
                         setVerificationMessage('Could not get download link automatically. Please download manually from Terabox.');
                         setShowCaptchaModal(true);
                     }
