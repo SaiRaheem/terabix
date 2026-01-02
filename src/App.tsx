@@ -44,14 +44,27 @@ function App() {
         setCurrentLink(link);
 
         try {
-            const response = await fetchDownloadLink(link, cookies);
+            // If extension is installed and no cookies provided, get them automatically
+            let actualCookies = cookies;
+            if (extensionDetected && !cookies) {
+                console.log('Extension detected, getting cookies automatically...');
+                try {
+                    actualCookies = await getCookiesViaExtension('www.terabox.app');
+                    console.log('✅ Got cookies from extension');
+                } catch (extError) {
+                    console.error('Failed to get cookies from extension:', extError);
+                    setError('Extension failed to get cookies. Please paste cookies manually or visit terabox.app first.');
+                    return;
+                }
+            }
+
+            const response = await fetchDownloadLink(link, actualCookies);
 
             if (response.success && response.data) {
                 // Check if server wants browser to get download link
                 if ('needsBrowserDownload' in response && response.needsBrowserDownload) {
                     console.log('Server requested browser-based download');
 
-                    // Type guard: needsBrowserDownload only comes with FileMetadata
                     const fileData = response.data as FileMetadata;
 
                     if (!fileData.surl || !fileData.fs_id) {
@@ -59,42 +72,45 @@ function App() {
                         return;
                     }
 
-                    try {
-                        // Browser makes download request directly to Terabox
-                        const downloadLink = await getDownloadLinkFromBrowser(
-                            fileData.surl,
-                            fileData.fs_id,
-                            cookies,
-                            response.apiDomain || 'www.terabox.app'
-                        );
+                    // If extension is installed, use it to get download link
+                    if (extensionDetected) {
+                        console.log('Using extension to get download link...');
+                        try {
+                            const result = await getDownloadLinkViaExtension(
+                                fileData.surl,
+                                fileData.fs_id,
+                                response.apiDomain || 'www.terabox.app'
+                            );
 
-                        // Success! Got download link from browser
-                        setFileData({
-                            ...fileData,
-                            download_link: downloadLink
-                        });
-                        setIsFolder(false);
-                        setRequiresVerification(false);
+                            setFileData({
+                                ...fileData,
+                                download_link: result.downloadLink
+                            });
+                            setIsFolder(false);
+                            setRequiresVerification(false);
 
-                        console.log('✅ Browser successfully got download link!');
-                    } catch (browserError) {
-                        console.error('Browser download failed:', browserError);
-
-                        // Browser request also failed - show file info with manual download
+                            console.log('✅ Extension successfully got download link!');
+                        } catch (extError) {
+                            console.error('Extension download failed:', extError);
+                            setFileData(fileData);
+                            setIsFolder(false);
+                            setRequiresVerification(true);
+                            setShareLink(`https://${response.apiDomain || 'www.terabox.app'}/sharing/link?surl=${fileData.surl}`);
+                            setVerificationMessage('Could not get download link automatically. Please download manually from Terabox.');
+                            setShowCaptchaModal(true);
+                        }
+                    } else {
                         setFileData(fileData);
                         setIsFolder(false);
                         setRequiresVerification(true);
                         setShareLink(`https://${response.apiDomain || 'www.terabox.app'}/sharing/link?surl=${fileData.surl}`);
-                        setVerificationMessage('Could not get download link automatically. Please download manually from Terabox.');
+                        setVerificationMessage('Install the Chrome extension for automatic downloads!');
                         setShowCaptchaModal(true);
                     }
                 } else {
-                    // Normal flow (server got download link or it's a folder)
                     setFileData(response.data);
-                    // Check if it's a folder by checking for 'files' property
                     setIsFolder('files' in response.data);
 
-                    // Handle verification requirement
                     if ('requiresVerification' in response && response.requiresVerification) {
                         setRequiresVerification(true);
                         setShareLink(response.shareLink || null);

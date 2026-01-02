@@ -24,9 +24,9 @@ const DownloadForm: React.FC<DownloadFormProps> = ({ onSubmit, isLoading, extens
             isValid = false;
         }
 
-        // Validate cookies
-        if (!cookies.trim()) {
-            newErrors.cookies = 'Cookie is required';
+        // Validate cookies (only required if extension not detected)
+        if (!extensionDetected && !cookies.trim()) {
+            newErrors.cookies = 'Cookie is required (or install the Chrome extension)';
             isValid = false;
         }
 
