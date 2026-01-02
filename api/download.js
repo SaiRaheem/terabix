@@ -198,6 +198,30 @@ export default async function handler(req, res) {
         if (fileList.length === 1) {
             const file = fileList[0];
 
+            // Extract streaming URL BEFORE trying download (in case download fails with verify_v2)
+            let streamingUrl = null;
+            if (file.category === 1 || file.category === 3) { // Video or audio
+                console.log('Video/Audio file detected, checking for streaming URLs...');
+                console.log('Available URLs from /share/list:', {
+                    dlink: file.dlink,
+                    thumbs_url1: file.thumbs?.url1,
+                    thumbs_url2: file.thumbs?.url2,
+                    thumbs_url3: file.thumbs?.url3,
+                    thumbs_url4: file.thumbs?.url4,
+                    streaming_url: file.streaming_url,
+                    preview_url: file.preview_url
+                });
+
+                // For videos, thumbs.url3 or url4 might be a video preview/stream
+                streamingUrl = file.thumbs?.url4 || file.thumbs?.url3 || file.dlink;
+
+                // Some files have a 'streaming_url' or 'preview_url'
+                if (file.streaming_url) streamingUrl = file.streaming_url;
+                if (file.preview_url) streamingUrl = file.preview_url;
+
+                console.log('Selected streaming URL (from list):', streamingUrl);
+            }
+
             // Try to get download link from server
             const downloadUrl = `https://${apiDomain}/share/download`;
             const downloadParams = {
