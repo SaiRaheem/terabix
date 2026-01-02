@@ -51,6 +51,13 @@ function App() {
                 try {
                     actualCookies = await getCookiesViaExtension('www.terabox.app');
                     console.log('✅ Got cookies from extension');
+                    console.log('Cookie length:', actualCookies.length);
+                    console.log('Cookie preview:', actualCookies.substring(0, 100) + '...');
+
+                    if (!actualCookies || actualCookies.length === 0) {
+                        setError('No cookies found. Please visit terabox.app and login first.');
+                        return;
+                    }
                 } catch (extError) {
                     console.error('Failed to get cookies from extension:', extError);
                     setError('Extension failed to get cookies. Please paste cookies manually or visit terabox.app first.');
