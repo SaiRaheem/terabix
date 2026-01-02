@@ -195,22 +195,77 @@ export default async function handler(req, res) {
         if (fileList.length === 1) {
             const file = fileList[0];
 
-            // Instead of server trying to get download link (which gets verify_v2),
-            // return file metadata so BROWSER can get download link directly
+            // Try to get download link from server
+            const downloadUrl = `https://${apiDomain}/share/download`;
+            const downloadParams = {
+                shorturl: surl,
+                fid_list: `[${file.fs_id}]`,
+                sign: '',
+                timestamp: Math.floor(Date.now() / 1000),
+                devuid: '',
+                clienttype: '0',
+                app_id: '250',
+                web: '1',
+                channel: 'dubox',
+            };
+
+            const downloadResponse = await withRetry(() =>
+                axios.get(downloadUrl, {
+                    params: downloadParams,
+                    headers: enhancedHeaders,
+                    httpsAgent: httpsAgent,
+                    timeout: 50000,
+                    maxContentLength: Infinity,
+                    maxBodyLength: Infinity,
+                })
+            );
+
+            if (downloadResponse.data.errno !== 0) {
+                const errorMsg = downloadResponse.data.errmsg || 'Unknown error';
+
+                // Special handling for CAPTCHA verification - return file details anyway
+                if (errorMsg.includes('verify') || errorMsg.includes('captcha')) {
+                    return res.status(200).json({
+                        success: true,
+                        requiresVerification: true,
+                        data: {
+                            file_name: file.server_filename,
+                            file_size: formatFileSize(file.size),
+                            size_bytes: file.size,
+                            download_link: null,
+                            isFolder: false,
+                            thumbnail: file.thumbs?.url3 || file.thumbs?.url2 || file.thumbs?.url1 || null,
+                        },
+                        message: 'File details retrieved. Download requires manual verification.',
+                        shareLink: `https://${apiDomain}/sharing/link?surl=${surl}`
+                    });
+                }
+
+                return res.status(400).json({
+                    success: false,
+                    error: `Failed to get download link: ${errorMsg}`
+                });
+            }
+
+            const downloadLink = downloadResponse.data.dlink || downloadResponse.data.list?.[0]?.dlink;
+
+            if (!downloadLink) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Could not retrieve download link. The file may require PC client download.'
+                });
+            }
+
             return res.status(200).json({
                 success: true,
-                needsBrowserDownload: true,
                 data: {
                     file_name: file.server_filename,
                     file_size: formatFileSize(file.size),
                     size_bytes: file.size,
-                    fs_id: file.fs_id,
-                    surl: surl,
-                    thumbnail: file.thumbs?.url3 || file.thumbs?.url2 || file.thumbs?.url1 || null,
+                    download_link: downloadLink,
                     isFolder: false,
-                },
-                message: 'File metadata retrieved. Browser will fetch download link.',
-                apiDomain: apiDomain
+                    thumbnail: file.thumbs?.url3 || null,
+                }
             });
         } else {
             const files = fileList.map(file => ({
