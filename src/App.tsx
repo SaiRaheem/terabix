@@ -4,7 +4,7 @@ import FileDisplay from './components/FileDisplay';
 import ThemeToggle from './components/ThemeToggle';
 import CookieInstructions from './components/CookieInstructions';
 import CaptchaModal from './components/CaptchaModal';
-import { fetchDownloadLink, getDownloadLinkFromBrowser } from './utils/api';
+import { fetchDownloadLink } from './utils/api';
 import { isExtensionInstalled, getDownloadLinkViaExtension, getCookiesViaExtension } from './utils/extension';
 import type { FileMetadata, FolderContent } from './types';
 import './index.css';
