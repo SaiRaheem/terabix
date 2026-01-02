@@ -10,9 +10,10 @@ export interface FileMetadata {
     file_size: string; // Human-readable size (e.g., "1.5 GB")
     size_bytes: number;
     thumbnail?: string;
-    download_link: string;
+    download_link: string | null;
     proxy_url?: string;
-    fs_id?: string;
+    fs_id?: number;
+    surl?: string;
     isdir?: number;
 }
 
@@ -28,6 +29,8 @@ export interface ApiResponse {
     message?: string;
     requiresVerification?: boolean;
     shareLink?: string;
+    needsBrowserDownload?: boolean;
+    apiDomain?: string;
 }
 
 export interface TeraboxInitResponse {

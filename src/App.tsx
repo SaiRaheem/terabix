@@ -4,7 +4,7 @@ import FileDisplay from './components/FileDisplay';
 import ThemeToggle from './components/ThemeToggle';
 import CookieInstructions from './components/CookieInstructions';
 import CaptchaModal from './components/CaptchaModal';
-import { fetchDownloadLink } from './utils/api';
+import { fetchDownloadLink, getDownloadLinkFromBrowser } from './utils/api';
 import type { FileMetadata, FolderContent } from './types';
 import './index.css';
 
@@ -33,16 +33,52 @@ function App() {
             const response = await fetchDownloadLink(link, cookies);
 
             if (response.success && response.data) {
-                setFileData(response.data);
-                // Check if it's a folder by checking for 'files' property
-                setIsFolder('files' in response.data);
+                // Check if server wants browser to get download link
+                if ('needsBrowserDownload' in response && response.needsBrowserDownload) {
+                    console.log('Server requested browser-based download');
 
-                // Handle verification requirement
-                if ('requiresVerification' in response && response.requiresVerification) {
-                    setRequiresVerification(true);
-                    setShareLink(response.shareLink || null);
-                    setVerificationMessage(response.message || null);
-                    setShowCaptchaModal(true);
+                    try {
+                        // Browser makes download request directly to Terabox
+                        const downloadLink = await getDownloadLinkFromBrowser(
+                            response.data.surl,
+                            response.data.fs_id,
+                            cookies,
+                            response.apiDomain || 'www.terabox.app'
+                        );
+
+                        // Success! Got download link from browser
+                        setFileData({
+                            ...response.data,
+                            download_link: downloadLink
+                        });
+                        setIsFolder(false);
+                        setRequiresVerification(false);
+
+                        console.log('✅ Browser successfully got download link!');
+                    } catch (browserError) {
+                        console.error('Browser download failed:', browserError);
+
+                        // Browser request also failed - show file info with manual download
+                        setFileData(response.data);
+                        setIsFolder(false);
+                        setRequiresVerification(true);
+                        setShareLink(`https://${response.apiDomain || 'www.terabox.app'}/sharing/link?surl=${response.data.surl}`);
+                        setVerificationMessage('Could not get download link automatically. Please download manually from Terabox.');
+                        setShowCaptchaModal(true);
+                    }
+                } else {
+                    // Normal flow (server got download link or it's a folder)
+                    setFileData(response.data);
+                    // Check if it's a folder by checking for 'files' property
+                    setIsFolder('files' in response.data);
+
+                    // Handle verification requirement
+                    if ('requiresVerification' in response && response.requiresVerification) {
+                        setRequiresVerification(true);
+                        setShareLink(response.shareLink || null);
+                        setVerificationMessage(response.message || null);
+                        setShowCaptchaModal(true);
+                    }
                 }
             } else {
                 setError(response.error || 'Failed to fetch download link');
